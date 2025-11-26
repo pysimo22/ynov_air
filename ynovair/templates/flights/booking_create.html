@@ -1,0 +1,174 @@
+{% extends 'flights/base.html' %}
+
+{% block title %}Réserver - Ynov Air{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Réserver votre vol</h1>
+
+    <div class="booking-summary">
+        <h2>Vol {{ flight.flight_number }}</h2>
+        <p>{{ flight.origin.city }} → {{ flight.destination.city }}</p>
+        <p>Départ: {{ flight.departure_time|date:"d/m/Y à H:i" }}</p>
+        <p>Prix: {{ flight.price }} € par passager</p>
+    </div>
+
+    <form method="POST" class="booking-form">
+        {% csrf_token %}
+        <h3>Informations du passager principal</h3>
+
+        <div class="form-group">
+            <label for="first_name">Prénom *</label>
+            <input type="text" name="first_name" value="{{ user.first_name }}" id="first_name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="last_name">Nom *</label>
+            <input type="text" name="last_name" value="{{ user.last_name }}" id="last_name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email *</label>
+            <input type="email" name="email" value="{{ user.email }}" id="email" required>
+        </div>
+
+        <div class="form-group">
+            <label for="phone">Téléphone *</label>
+            <input type="tel" name="phone" id="phone" required>
+        </div>
+
+        <div class="form-group">
+            <label for="passport_number">Numéro de passeport *</label>
+            <input type="text" name="passport_number" id="passport_number" required>
+        </div>
+
+        <div class="form-group">
+            <label for="date_of_birth">Date de naissance *</label>
+            <input type="date" name="date_of_birth" id="date_of_birth" required>
+        </div>
+
+        <div class="form-group">
+            <label for="number_of_passengers">Nombre de passagers *</label>
+            <input type="number" name="number_of_passengers" id="number_of_passengers" min="1" max="9" value="1" required>
+        </div>
+
+        <!-- Luggage Section -->
+        <div class="luggage-section" style="border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3>Informations sur les bagages</h3>
+            
+            <div class="luggage-info" style="background-color: #f9f9f9; padding: 15px; margin-bottom: 15px; border-left: 4px solid #007bff;">
+                <p><strong>Franchise de bagage:</strong> <span id="free_allowance">20</span> kg par passager</p>
+                <p><strong>Poids maximum par bagage:</strong> 32 kg</p>
+                <p><strong>Tarif bagage supplémentaire:</strong> 5 € par kg excédentaire</p>
+            </div>
+
+            <div class="form-group">
+                <label for="baggage_quantity">Nombre de pièces de bagage</label>
+                <input type="number" name="baggage_quantity" id="baggage_quantity" min="0" value="0">
+            </div>
+
+            <div class="form-group">
+                <label for="baggage_weight">Poids total du bagage (kg)</label>
+                <input type="number" name="baggage_weight" id="baggage_weight" min="0" step="0.01" value="0" placeholder="Ex: 23.5">
+            </div>
+
+            <div class="form-group">
+                <label for="baggage_description">Description (optionnel)</label>
+                <input type="text" name="baggage_description" id="baggage_description" placeholder="Ex: Valise noire, sac à dos...">
+            </div>
+
+            <!-- Real-time calculation display -->
+            <div style="background-color: #e7f3ff; padding: 15px; border-radius: 5px; margin-top: 15px;">
+                <p><strong>Poids déclaré:</strong> <span id="declared_weight">0</span> kg</p>
+                <p><strong>Poids gratuit:</strong> <span id="free_weight">0</span> kg</p>
+                <p id="excess_info" style="display: none;"><strong>Poids excédentaire:</strong> <span id="excess_weight">0</span> kg</p>
+                <p id="excess_charge_info" style="display: none; color: #d9534f;"><strong>Frais bagages supplémentaires:</strong> <span id="excess_charge">0</span> €</p>
+            </div>
+        </div>
+
+        <div class="total-price" style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h4>Résumé du prix</h4>
+            <p>Prix des billets: <span id="flight_total">{{ flight.price }}</span> €</p>
+            <p id="baggage_charge_line" style="display: none;">Frais bagages: <span id="baggage_charge_display">0</span> €</p>
+            <p style="font-size: 1.2em; border-top: 1px solid #ccc; padding-top: 10px; margin-top: 10px;">
+                <strong>Prix total:</strong> <span id="total">{{ flight.price }}</span> €
+            </p>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">Confirmer la réservation</button>
+    </form>
+</div>
+
+<script>
+    const pricePerPassenger = {{ flight.price }};
+    const freeAllowance = 20;  // Hardcoded default
+    const pricePerExtraKg = 5;  // Hardcoded default
+    
+    const passengersInput = document.getElementById('number_of_passengers');
+    const bagageWeightInput = document.getElementById('baggage_weight');
+    const bagageQuantityInput = document.getElementById('baggage_quantity');
+    
+    const totalSpan = document.getElementById('total');
+    const flightTotalSpan = document.getElementById('flight_total');
+    const declaredWeightSpan = document.getElementById('declared_weight');
+    const freeWeightSpan = document.getElementById('free_weight');
+    const excessWeightSpan = document.getElementById('excess_weight');
+    const excessChargeSpan = document.getElementById('excess_charge');
+    const excessInfoP = document.getElementById('excess_info');
+    const excessChargeInfoP = document.getElementById('excess_charge_info');
+    const bagageChargeLineP = document.getElementById('baggage_charge_line');
+    const bagageChargeDisplaySpan = document.getElementById('baggage_charge_display');
+
+    function calculateTotal() {
+        // Calculate flight price
+        const numPassengers = parseInt(passengersInput.value) || 1;
+        const flightTotal = pricePerPassenger * numPassengers;
+        flightTotalSpan.textContent = flightTotal.toFixed(2);
+        
+        // Calculate baggage charges
+        const bagageWeight = parseFloat(bagageWeightInput.value) || 0;
+        
+        declaredWeightSpan.textContent = bagageWeight.toFixed(2);
+        
+        let totalPrice = flightTotal;
+        
+        if (bagageWeight > 0) {
+            const freeWeight = Math.min(bagageWeight, freeAllowance);
+            freeWeightSpan.textContent = freeWeight.toFixed(2);
+            
+            if (bagageWeight > freeAllowance) {
+                const excessWeight = bagageWeight - freeAllowance;
+                excessWeightSpan.textContent = excessWeight.toFixed(2);
+                excessInfoP.style.display = 'block';
+                
+                const excessCharge = excessWeight * pricePerExtraKg;
+                excessChargeSpan.textContent = excessCharge.toFixed(2);
+                excessChargeInfoP.style.display = 'block';
+                bagageChargeLineP.style.display = 'block';
+                bagageChargeDisplaySpan.textContent = excessCharge.toFixed(2);
+                
+                totalPrice += excessCharge;
+            } else {
+                excessInfoP.style.display = 'none';
+                excessChargeInfoP.style.display = 'none';
+                bagageChargeLineP.style.display = 'none';
+            }
+        } else {
+            excessInfoP.style.display = 'none';
+            excessChargeInfoP.style.display = 'none';
+            bagageChargeLineP.style.display = 'none';
+            freeWeightSpan.textContent = '0';
+        }
+        
+        totalSpan.textContent = totalPrice.toFixed(2);
+    }
+
+    // Event listeners
+    passengersInput.addEventListener('input', calculateTotal);
+    bagageWeightInput.addEventListener('input', calculateTotal);
+    bagageQuantityInput.addEventListener('input', calculateTotal);
+    
+    // Initial calculation
+    calculateTotal();
+</script>
+{% endblock %}

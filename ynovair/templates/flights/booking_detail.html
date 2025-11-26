@@ -1,0 +1,122 @@
+{% extends 'flights/base.html' %}
+
+{% block title %}Réservation {{ booking.booking_reference }} - Ynov Air{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="booking-confirmation">
+        <h1>Réservation confirmée</h1>
+        <div class="confirmation-box">
+            <div class="check-icon">✓</div>
+            <p class="ref">Référence: <strong>{{ booking.booking_reference }}</strong></p>
+            <p>Votre réservation a été enregistrée avec succès.</p>
+        </div>
+
+        <div class="booking-info">
+            <h2>Détails de la réservation</h2>
+
+            <div class="info-section">
+                <h3>Vol</h3>
+                <p><strong>Numéro:</strong> {{ booking.flight.flight_number }}</p>
+                <p><strong>Itinéraire:</strong> {{ booking.flight.origin.city }} → {{ booking.flight.destination.city }}</p>
+                <p><strong>Départ:</strong> {{ booking.flight.departure_time|date:"d/m/Y à H:i" }}</p>
+                <p><strong>Arrivée:</strong> {{ booking.flight.arrival_time|date:"d/m/Y à H:i" }}</p>
+            </div>
+
+            <div class="info-section">
+                <h3>Passager</h3>
+                <p><strong>Nom:</strong> {{ booking.passenger.get_full_name }}</p>
+                <p><strong>Email:</strong> {{ booking.passenger.email }}</p>
+                <p><strong>Téléphone:</strong> {{ booking.passenger.phone }}</p>
+                <p><strong>Passeport:</strong> {{ booking.passenger.passport_number }}</p>
+            </div>
+
+            <!-- Luggage Information Section -->
+            {% if baggages %}
+            <div class="info-section" style="border: 1px solid #007bff; border-radius: 5px; padding: 15px; background-color: #f0f8ff;">
+                <h3>Informations sur les bagages</h3>
+                
+                <p><strong>Franchise applicable:</strong> 20 kg par passager</p>
+                
+                {% for baggage in baggages %}
+                {% if baggage.is_extra %}
+                <div style="background-color: #fff; padding: 10px; margin: 10px 0; border-left: 4px solid #d9534f; border-radius: 3px;">
+                    <p>
+                        <strong>Bagage {{ forloop.counter }}:</strong>
+                        {% if baggage.description %}{{ baggage.description }} - {% endif %}
+                        {{ baggage.quantity }} pièce(s) - {{ baggage.weight_kg }} kg
+                    </p>
+                    <p style="color: #d9534f;">
+                        <strong>Excédent:</strong> {{ baggage.weight_kg|floatformat:2 }} kg
+                        <strong>Frais:</strong> {{ baggage.calculate_extra_charge|floatformat:2 }} €
+                    </p>
+                </div>
+                {% else %}
+                <div style="background-color: #fff; padding: 10px; margin: 10px 0; border-left: 4px solid #5cb85c; border-radius: 3px;">
+                    <p>
+                        <strong>Bagage {{ forloop.counter }}:</strong>
+                        {% if baggage.description %}{{ baggage.description }} - {% endif %}
+                        {{ baggage.quantity }} pièce(s) - {{ baggage.weight_kg }} kg
+                    </p>
+                    <p style="color: #5cb85c;"><strong>✓ Dans la franchise</strong></p>
+                </div>
+                {% endif %}
+                {% endfor %}
+                
+                <div style="background-color: #f9f9f9; padding: 10px; margin-top: 15px; border-top: 2px solid #007bff;">
+                    <p><strong>Poids total des bagages:</strong> {{ total_baggage_weight|floatformat:2 }} kg</p>
+                    {% if total_excess_charge > 0 %}
+                    <p style="color: #d9534f;"><strong>Frais bagages supplémentaires:</strong> {{ total_excess_charge|floatformat:2 }} €</p>
+                    {% else %}
+                    <p style="color: #5cb85c;"><strong>✓ Aucun frais supplémentaire</strong></p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="info-section">
+                <h3>Tarif</h3>
+                <p><strong>Nombre de passagers:</strong> {{ booking.number_of_passengers }}</p>
+                <p><strong>Prix du vol:</strong> {{ booking.flight.price }} € × {{ booking.number_of_passengers }} = {{ flight_total }} €</p>
+                {% if total_excess_charge > 0 %}
+                <p><strong>Frais bagages supplémentaires:</strong> {{ total_excess_charge|floatformat:2 }} €</p>
+                {% endif %}
+                <p style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px; font-size: 1.1em;">
+                    <strong>Prix total:</strong> {{ booking.total_price }} €
+                </p>
+                <p><strong>Statut:</strong> <span class="status status-{{ booking.status|lower }}">{{ booking.get_status_display }}</span></p>
+                {% if booking.seat_number %}
+                <p><strong>Siège:</strong> {{ booking.seat_number }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="{% url 'home' %}" class="btn btn-primary">Retour à l'accueil</a>
+            <a href="{% url 'my_bookings' %}" class="btn btn-secondary">Mes réservations</a>
+            
+        </div>
+    </div>
+</div>
+
+<!-- Custom template filter for multiplication if not already available -->
+<style>
+    .status {
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-weight: bold;
+    }
+    .status-confirmed {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .status-pending {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .status-cancelled {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}

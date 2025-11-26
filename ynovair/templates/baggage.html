@@ -1,0 +1,29 @@
+{% extends 'flights/base.html' %}
+
+{% block title %}Ynov Air - Ajouter un bagage{% endblock %}
+
+{% block content %}
+
+<h3>Ajouter un bagage pour la réservation {{ booking.booking_reference }}</h3>
+
+<form method="POST" class="booking-form">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <label for="weight_kg">Poids du bagage (kg) *</label>
+        <input type="number" step="0.01" min="0" name="weight_kg" id="weight_kg" placeholder="Ex: 23.5" required>
+    </div><br>
+
+    <div class="form-group">
+        <label for="status">Statut du bagage *</label>
+        <select name="status" id="status" required>
+            <option value="CHECKED_IN">Enregistré</option>
+            <option value="LOADED">Chargé</option>
+            <option value="LOST">Perdu</option>
+        </select>
+    </div><br>
+
+    <button type="submit" class="btn btn-primary btn-lg">Ajouter le bagage</button>
+</form>
+
+{% endblock %}
